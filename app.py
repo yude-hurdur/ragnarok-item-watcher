@@ -304,6 +304,7 @@ if st.session_state.watching:
                 "📉 Diferença para o alvo",
                 f"{fmt(abs(delta))} Zeny",
                 delta=f"{'abaixo' if delta >= 0 else 'acima'} do alvo",
+                delta_color="normal" if delta >= 0 else "inverse",
             )
         with metric_col3:
             st.metric("🏪 Loja", resultado.get("Loja", "-"))

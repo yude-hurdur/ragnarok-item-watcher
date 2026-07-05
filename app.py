@@ -338,7 +338,7 @@ if st.session_state.watching:
             st.markdown(
                 f"""
                 <audio autoplay>
-                    <source src="hey_listen.mp3" type="audio/mpeg">
+                    <source src="https://github.com/yude-hurdur/ragnarok-item-watcher/blob/main/hey_listen.mp3" type="audio/mpeg">
                 </audio>
                 <script>
                     document.querySelector('audio').volume = {vol};
@@ -393,7 +393,7 @@ elif st.session_state.found_deal:
     st.markdown(
         f"""
         <audio autoplay>
-            <source src="hey_listen.mp3" type="audio/mpeg">
+            <source src="https://github.com/yude-hurdur/ragnarok-item-watcher/blob/main/hey_listen.mp3" type="audio/mpeg">
         </audio>
         <script>
             document.querySelector('audio').volume = {vol};

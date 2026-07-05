@@ -6,7 +6,7 @@ import aiohttp
 import streamlit as st
 import pandas as pd
 
-CHECK_INTERVAL = 60
+CHECK_INTERVAL = 30
 MAX_RETRIES = 5
 DELAY_ENTRE_BATCHES = 0.5
 MAX_CONCURRENT = 1
@@ -217,7 +217,7 @@ st.set_page_config(page_title="Ragnarok Item Watcher", layout="wide")
 st.title("Ragnarok Item Watcher")
 st.markdown(
     "Monitore o preço de um item no mercado. "
-    "O app verifica a cada **60 segundos** se o menor preço está "
+    "O app verifica a cada **30 segundos** se o menor preço está "
     "abaixo do seu valor alvo."
 )
 with st.container(border=True):

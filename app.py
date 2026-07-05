@@ -227,7 +227,6 @@ with st.container(border=True):
             "🔍 Nome do Item",
             value=st.session_state.item_name,
             disabled=st.session_state.watching,
-            placeholder="Ex: Espada Certeira",
         )
     with col2:
         max_price = st.number_input(

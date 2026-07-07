@@ -1,5 +1,7 @@
 import asyncio
+import base64
 import json
+import os
 import re
 import time
 import aiohttp
@@ -11,9 +13,49 @@ MAX_RETRIES = 5
 DELAY_ENTRE_BATCHES = 0.5
 MAX_CONCURRENT = 1
 
+st.set_page_config(page_title="Ragnarok Item Watcher", layout="wide")
+
+_SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+def listar_mp3():
+    return sorted(
+        f for f in os.listdir(_SCRIPT_DIR)
+        if f.lower().endswith(".mp3")
+    )
+
+@st.cache_data
+def _cached_audio_base64(filename: str):
+    path = os.path.join(_SCRIPT_DIR, filename)
+    with open(path, "rb") as f:
+        b64 = base64.b64encode(f.read()).decode("utf-8")
+    return f"data:audio/mpeg;base64,{b64}"
+
+def tocar_alarme(volume: float, filename: str):
+    audio_src = _cached_audio_base64(filename)
+    st.components.v1.html(
+        f"""
+        <audio id="alarm" data-ts="{time.time()}"
+               style="display:none;">
+            <source src="{audio_src}" type="audio/mpeg">
+        </audio>
+        <script>
+            var a = document.getElementById('alarm');
+            a.volume = {volume};
+            var ok = a.play();
+            if (ok !== undefined) {{
+                ok.catch(function() {{
+                    a.muted = true;
+                    a.play().then(function() {{
+                        a.muted = false;
+                    }});
+                }});
+            }}
+        </script>
+        """,
+        height=0,
+    )
 
 def fmt(v):
-    """Formata um número com separador de milhar '.' (ex: 1.500.000)."""
     if v is None:
         return ""
     return f"{int(v):,}".replace(",", ".")
@@ -84,7 +126,6 @@ def extrair_dados_items_do_html(response_text, search_word):
 
 
 def extrair_detalhes_post(response_text):
-    """Extrai os detalhes do item da resposta do POST (Next.js RSC)."""
     try:
         match = re.search(
             r'1:(\{"data":.*?"success":true\})',
@@ -102,7 +143,6 @@ def extrair_detalhes_post(response_text):
 
 
 async def buscar_detalhes_item(session, throttle, search_word, svr_id, map_id, ssi):
-    """Faz o POST para obter detalhes do item (itemFullName, etc)."""
     url = (
         "https://ro.gnjoylatam.com/pt/intro/shop-search/trading"
         f"?storeType=BUY"
@@ -177,7 +217,6 @@ async def buscar_preco_mais_barato(session, throttle, search_word):
         return None
     primeiro = items_raw[0]
 
-    # Busca detalhes do item (POST) para pegar o nome real (itemFullName)
     detalhes = await buscar_detalhes_item(
         session, throttle, search_word,
         primeiro["svrId"], primeiro["mapId"], primeiro["ssi"]
@@ -199,11 +238,17 @@ async def checar_item(search_word):
     async with aiohttp.ClientSession() as session:
         return await buscar_preco_mais_barato(session, throttle, search_word)
 
+mp3_disponiveis = listar_mp3()
+if not mp3_disponiveis:
+    st.error("Nenhum arquivo .mp3 encontrado na pasta do script!")
+    st.stop()
+
 defaults = {
     "watching": False,
     "item_name": "",
     "max_price": 0,
-    "volume": 50,
+    "volume": 25,
+    "sound_file": mp3_disponiveis[0],
     "check_count": 0,
     "found_deal": None,
     "last_result": None,
@@ -213,7 +258,6 @@ for key, val in defaults.items():
     if key not in st.session_state:
         st.session_state[key] = val
 
-st.set_page_config(page_title="Ragnarok Item Watcher", layout="wide")
 st.title("Ragnarok Item Watcher")
 st.markdown(
     "Monitore o preço de um item no mercado. "
@@ -246,6 +290,17 @@ with st.container(border=True):
             help="Volume do som de alerta quando o preço alvo for atingido.",
         )
 
+    col_som, *_ = st.columns([1])
+    with col_som:
+        sound_file = st.selectbox(
+            "🔔 Som do Alarme",
+            options=mp3_disponiveis,
+            index=mp3_disponiveis.index(st.session_state.sound_file)
+            if st.session_state.sound_file in mp3_disponiveis
+            else 0,
+            disabled=st.session_state.watching,
+        )
+
     col_btn1, col_btn2 = st.columns([1, 1])
     with col_btn1:
         if not st.session_state.watching:
@@ -257,6 +312,7 @@ with st.container(border=True):
                     st.session_state.item_name = item_name.strip()
                     st.session_state.max_price = max_price
                     st.session_state.volume = volume
+                    st.session_state.sound_file = sound_file
                     st.session_state.check_count = 0
                     st.session_state.found_deal = None
                     st.session_state.last_result = None
@@ -334,18 +390,7 @@ if st.session_state.watching:
                 f"🗺️ Local: **{resultado.get('Mapa', '-')} "
                 f"({resultado.get('X')}, {resultado.get('Y')})**"
             )
-            vol = st.session_state.volume / 100
-            st.markdown(
-                f"""
-                <audio autoplay>
-                    <source src="https://github.com/yude-hurdur/ragnarok-item-watcher/blob/main/hey_listen.mp3" type="audio/mpeg">
-                </audio>
-                <script>
-                    document.querySelector('audio').volume = {vol};
-                </script>
-                """,
-                unsafe_allow_html=True,
-            )
+            tocar_alarme(st.session_state.volume / 100, st.session_state.sound_file)
         else:
             st.info(
                 f"⏳ Preço atual ({fmt(preco)} Zeny) ainda está **acima** do alvo "
@@ -390,16 +435,5 @@ elif st.session_state.found_deal:
     if "Preço" in df_deal.columns:
         df_deal["Preço"] = df_deal["Preço"].apply(lambda v: fmt(v) if pd.notna(v) else "")
     st.dataframe(df_deal, hide_index=True, use_container_width=True)
-    vol = st.session_state.volume / 100
-    st.markdown(
-        f"""
-        <audio autoplay>
-            <source src="https://github.com/yude-hurdur/ragnarok-item-watcher/blob/main/hey_listen.mp3" type="audio/mpeg">
-        </audio>
-        <script>
-            document.querySelector('audio').volume = {vol};
-        </script>
-        """,
-        unsafe_allow_html=True,
-    )
+    tocar_alarme(st.session_state.volume / 100, st.session_state.sound_file)
     st.caption("O monitoramento foi pausado. Configure um novo item para reiniciar.")

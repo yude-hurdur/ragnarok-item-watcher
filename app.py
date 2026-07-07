@@ -113,7 +113,7 @@ async def buscar_detalhes_item(session, throttle, search_word, svr_id, map_id, s
     headers = {
         "Accept": "text/x-component",
         "Content-Type": "text/plain;charset=UTF-8",
-        "Next-Action": "40272e359ff56df8fda0073807b30ac5f0640bf73d",
+        "Next-Action": "404ed8774f606f8b1eb689aac3cb179d34321adc53",
         "Origin": "https://ro.gnjoylatam.com",
         "Referer": url,
         "User-Agent": "Mozilla/5.0",

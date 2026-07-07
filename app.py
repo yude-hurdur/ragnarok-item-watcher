@@ -359,6 +359,7 @@ if st.session_state.watching:
                 df_hist["Preço"] = df_hist["Preço"].apply(
                     lambda v: fmt(v) if pd.notna(v) else ""
                 )
+            df_hist = df_hist.sort_values("Checagem", ascending=False)
             st.dataframe(df_hist, hide_index=True, use_container_width=True)
             st.line_chart(
                 df_hist.set_index("Checagem")["Preço"],
